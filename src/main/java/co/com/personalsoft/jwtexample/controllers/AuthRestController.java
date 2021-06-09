@@ -70,7 +70,7 @@ public class AuthRestController {
     })
     public ResponseEntity<Object> authenticateUser(@Valid @RequestBody LoginRequest loginRequest, BindingResult result) {
 
-        if (result.hasErrors()) this.validar(result);
+        if (result.hasErrors()) return this.validar(result);
 
         var authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
@@ -109,7 +109,7 @@ public class AuthRestController {
             @ApiResponse(code = 404, message = "Recurso no encontrado")
     })
     public ResponseEntity<Object> registerUser(@Valid @RequestBody SignUpRequest signUpRequest, BindingResult result){
-        if (result.hasErrors()) this.validar(result);
+        if (result.hasErrors()) return this.validar(result);
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
             return ResponseEntity
                     .badRequest()
