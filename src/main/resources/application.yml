@@ -11,4 +11,5 @@ server:
 example:
   app:
     jwtSecret: d16a249613a9969aca19846263698f0223eeccf0e64bd62284bac665671fcb17
-    jwtExpirationMs: 864000000
+    jwtExpirationMs: 3600000
+    jwtRefreshExpirationMs: 864000000

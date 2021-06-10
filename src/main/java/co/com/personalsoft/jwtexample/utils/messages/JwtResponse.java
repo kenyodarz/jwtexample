@@ -9,7 +9,8 @@ import java.util.List;
 @AllArgsConstructor
 public class JwtResponse {
     private String token;
-    private final String type = "Bearer";
+    private static final String TOKEN_TYPE = "Bearer";
+    private String refreshToken;
     private String id;
     private String name;
     private String username;

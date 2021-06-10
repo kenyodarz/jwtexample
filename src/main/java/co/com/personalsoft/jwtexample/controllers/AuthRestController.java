@@ -1,16 +1,22 @@
 package co.com.personalsoft.jwtexample.controllers;
 
+import co.com.personalsoft.jwtexample.exception.TokenRefreshException;
 import co.com.personalsoft.jwtexample.models.ERole;
+import co.com.personalsoft.jwtexample.models.RefreshToken;
 import co.com.personalsoft.jwtexample.models.Role;
 import co.com.personalsoft.jwtexample.models.User;
 import co.com.personalsoft.jwtexample.repositories.RoleRepository;
 import co.com.personalsoft.jwtexample.repositories.UserRepository;
 import co.com.personalsoft.jwtexample.security.keys.JwtUtils;
+import co.com.personalsoft.jwtexample.services.RefreshTokenService;
 import co.com.personalsoft.jwtexample.services.UserDetailsImpl;
 import co.com.personalsoft.jwtexample.utils.messages.JwtResponse;
 import co.com.personalsoft.jwtexample.utils.messages.MessageResponse;
+import co.com.personalsoft.jwtexample.utils.messages.TokenRefreshResponse;
+import co.com.personalsoft.jwtexample.utils.request.LogOutRequest;
 import co.com.personalsoft.jwtexample.utils.request.LoginRequest;
 import co.com.personalsoft.jwtexample.utils.request.SignUpRequest;
+import co.com.personalsoft.jwtexample.utils.request.TokenRefreshRequest;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
@@ -38,14 +44,17 @@ public class AuthRestController {
     private final RoleRepository roleRepository;
     private final PasswordEncoder encoder;
     private final JwtUtils jwtUtils;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthRestController(AuthenticationManager authenticationManager, UserRepository userRepository,
-                              RoleRepository roleRepository, PasswordEncoder passwordEncoder, JwtUtils jwtUtils) {
+                              RoleRepository roleRepository, PasswordEncoder passwordEncoder, JwtUtils jwtUtils,
+                              RefreshTokenService refreshTokenService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.encoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
+        this.refreshTokenService = refreshTokenService;
     }
 
     // Validator de campos
@@ -78,16 +87,19 @@ public class AuthRestController {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        String jwtToken = jwtUtils.generateJwtToken(authentication);
-
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+        String jwtToken = jwtUtils.generateJwtToken(userDetails);
 
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
 
+        var refreshToken = refreshTokenService.createRefreshToken(userDetails.getId());
+
         return ResponseEntity.ok(new JwtResponse(
                 jwtToken,
+                refreshToken.getToken(),
                 userDetails.getId(),
                 userDetails.getName(),
                 userDetails.getUsername(),
@@ -164,6 +176,27 @@ public class AuthRestController {
         user.setRoles(roles);
         userRepository.save(user);
         return ResponseEntity.ok(new MessageResponse("Usuario creado Correctamente"));
+    }
+
+    @PostMapping("/refreshtoken")
+    public ResponseEntity<?> refreshtoken(@Valid @RequestBody TokenRefreshRequest request) {
+        String requestRefreshToken = request.getRefreshToken();
+
+        return refreshTokenService.findByToken(requestRefreshToken)
+                .map(refreshTokenService::verifyExpiration)
+                .map(RefreshToken::getUser)
+                .map(user -> {
+                    String token = jwtUtils.generateTokenFromUsername(user.getUsername());
+                    return ResponseEntity.ok(new TokenRefreshResponse(token, requestRefreshToken));
+                })
+                .orElseThrow(() -> new TokenRefreshException(requestRefreshToken,
+                        "Refresh token no esta en la Base de datos!"));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logoutUser(@Valid @RequestBody LogOutRequest logOutRequest) {
+        refreshTokenService.deleteByUserId(logOutRequest.getUserId());
+        return ResponseEntity.ok(new MessageResponse("Log out successful!"));
     }
 
 }

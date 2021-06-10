@@ -1,6 +1,5 @@
 package co.com.personalsoft.jwtexample.services;
 
-import co.com.personalsoft.jwtexample.models.User;
 import co.com.personalsoft.jwtexample.repositories.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -21,7 +20,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = this.repository.findByUsername(username)
+        var user = this.repository.findByUsername(username)
                 .orElseThrow(() ->
                         new UsernameNotFoundException("No se encontro el nombre de usuario "
                                 + username));
