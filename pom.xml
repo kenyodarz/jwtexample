@@ -10,11 +10,12 @@
 	</parent>
 	<groupId>co.com.personalsoft</groupId>
 	<artifactId>jwtexample</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0</version>
 	<name>jwtexample</name>
 	<description>Demo project for Spring Boot</description>
 	<properties>
 		<java.version>11</java.version>
+		<skipTests>true</skipTests>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -107,6 +108,52 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>io.fabric8</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>0.21.0</version>
+				<configuration>
+					<images>
+						<image>
+							<name>kenyodarz/${project.build.finalName}:${project.version}</name>
+							<build>
+								<from>openjdk:latest</from>
+								<entryPoint>
+									<exec>
+										<args>java</args>
+										<args>-Dspring.profiles.active=pnd</args>
+										<args>-jar</args>
+										<args>/app/${project.build.finalName}.jar</args>
+									</exec>
+								</entryPoint>
+								<assembly>
+									<basedir>/app/</basedir>
+									<descriptorRef>artifact</descriptorRef>
+									<inline>
+										<id>assembly</id>
+										<files>
+											<file>
+												<source>target/${project.build.finalName}.jar</source>
+											</file>
+										</files>
+									</inline>
+								</assembly>
+								<tags>
+									<tag>latest</tag>
+									<tag>${project.version}</tag>
+								</tags>
+								<ports>
+									<port>8080</port>
+								</ports>
+							</build>
+							<run>
+								<namingStrategy>alias</namingStrategy>
+							</run>
+							<alias>{project.build.finalName}</alias>
+						</image>
+					</images>
 				</configuration>
 			</plugin>
 		</plugins>
